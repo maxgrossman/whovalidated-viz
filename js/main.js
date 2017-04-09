@@ -245,7 +245,7 @@ function variableGraphDraw() {
 
       // make scales/axes
       barVarXScale = d3.scaleLinear()
-        .domain([0,d3.max(barVar,function(d){return d[1]})])
+        .domain([0,d3.max(barVar,function(d){return parseInt(d[1])})])
         .range([0,scattHWplus.width]);
       barVarYScale = d3.scaleBand()
         .domain(barVar.map(function(d) {return d[0]}))
@@ -277,13 +277,27 @@ function variableGraphDraw() {
         .attr("height",barVarYScale.bandwidth()/2)
         .attr("width", function(d) {return barVarXScale(d[1])})
         .attr('fill',function(d) {return d3.schemeCategory10[d[2]]})
+        .on('mouseover',function(d){
+          // add validator text to svg
+          varBarGraph.append("text")
+            .attr("id",d[0])
+            .attr("x",barVarXScale(d[1])+4)
+            .attr("y", (barVarYScale(d[0])+(barVarYScale.bandwidth()/2)))
+            .style("font-size","12px")
+            .text(d[1])
+          d3.select(this).attr("stroke",'rgba(57,57,57,1)')
+        })
+        .on('mouseout',function(d){
+          d3.select("#"+d[0]).remove()
+          d3.select(this).attr("stroke",'rgba(57,57,57,0)')
+        })
 
       // add title
       varBarGraph.append("text")
         .attr("x",scattHWplus.width/2)
         .attr("y", -30)
         .attr("text-anchor",'middle')
-        .text(function(d){return variableTitles(d)})
+        .text(function(){return variableTitles(variableFilter)})
   }
 
 }
