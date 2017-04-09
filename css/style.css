@@ -5,10 +5,10 @@
   margin:auto;;width:80vw;
 }
 .tabs {
-  border: 1.5px solid rgba(57,57,57,0.3) !important
+  border: 0.5px solid rgba(57,57,57,0.3) !important
 }
 .tabs li:first-child {
-  border-right: 1.5px solid rgba(57,57,57,0.3)
+  border-right: 0.5px solid rgba(57,57,57,0.3);
 }
 .tabs li {
   width: 50%;
@@ -24,4 +24,14 @@
 }
 .checkbox {
   display:inline-block;
+}
+/*validatorScatter*/
+#validatorScatter {
+  text-align: center;
+}
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
 }
