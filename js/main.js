@@ -22,7 +22,23 @@ function filter() {
   variableFilter = activeFiltersLST.filter(
     function(d){if(!(parseInt(d)))return d}
   )
-  variableGraph()
+  variableGraphDraw()
+}
+
+// function to set rename variable names where relevant
+function variableTitles(d) {
+  if(Array.isArray(d)) {
+    if(d.length===1) {
+      graphTitle = variableFilter[0] === "acct_age" ? 'Days Mapping' :
+      variableFilter[0] === "validations" ? 'Validated Squares' :
+      variableFilter[0] === "mapping_freq" ? 'Mapping Frequency' : '';
+    }
+  } else {
+    graphTitle = d === "acct_age" ? 'Days Mapping' :
+    d === "validations" ? 'Validated Squares' :
+    d === "mapping_freq" ? 'Mapping Frequency' : '';
+  }
+  return graphTitle
 }
 
 // function to clear all checked boxes
@@ -31,7 +47,7 @@ function clearAllCheckboxes(){
   $.each(allCheckboxes, function(i, box){ $(box).prop('checked',false); });
   filter();
 }
-// function to fetch data
+// function to fetch
 function fetchData() {
   // load in validator data
   d3.tsv('../data/testvalidates.csv',function(data) {
@@ -56,11 +72,15 @@ function fillClassFieldTabs() {
   )
   // fill variable tab with variable checkboxes
   variables = Object.keys(validatorData.values()[0])
-  variables = variables.filter(function(a){if(!(a.match(/pca/))){return a}}).filter(
-    function(a){if(!(a.match(/user/))){return a}})
+  variables = variables.filter(
+    function(a){if(!(a.match(/pca/))){return a}}).filter(
+    function(a){if(!(a.match(/user/))){return a}}).filter(
+    function(a){if(!(a.match(/class/))){return a}})
+  // change variable names in dropdown
+  variablesText = variables.map(function(d) {return variableTitles(d)})
   for(i=0;i<variables.length;i++) {
     variables[i] = '<div class="checkbox"><label><input type="checkbox" value="' +
-    variables[i] + '" onchange="filter()">' + variables[i] + '</label></div><br>'
+    variables[i] + '" onchange="filter()">' + variablesText[i] + '</label></div><br>'
   }
   $('#filter-nav-tabs').append(
     '<div class="tabs-panel" id="variable">' + variables.join('') + '</div>'
@@ -179,17 +199,10 @@ function validatorScatter() {
           scattSVG.append("text")
             .attr("id",d[3])
             .attr("x",mouseCoords[0] + 10)
-            .attr("y",mouseCoords[1]-20)
-            .append("tspan")
-            .attr('x', mouseCoords[0] + 10)
-            .attr("dy",0)
+            .attr("y",mouseCoords[1]-10)
             .style("font-size","10px")
             .text(function() {return d[3]})
-            .append("tspan")
-            .attr('x', mouseCoords[0] + 10)
-            .attr("dy", 10)
-            .style("font-size","10px")
-            .text(validatorType)
+
           //focus on current scatter .dot
           d3.select(this).attr("stroke",'rgba(57,57,57,1)')
         })
@@ -197,9 +210,15 @@ function validatorScatter() {
           d3.select("#"+d[3]).remove()
           d3.select(this).attr("stroke",'rgba(57,57,57,0)')
         })
+
 }
 
-function variableGraph() {
+// function to draw variable graph after filters selected
+function variableGraphDraw() {
+  // remove current graph before adding the new one
+  d3.select("#variableBar").select("svg").remove();
+  // function to choose graph title
+
   // decide how to draw graphs. when just one variable, draw normal bar
   // when more than one to be drawn; normalize, then stack ba
   if(variableFilter.length===1){
@@ -264,11 +283,9 @@ function variableGraph() {
         .attr("x",scattHWplus.width/2)
         .attr("y", -30)
         .attr("text-anchor",'middle')
-        .text(function(d){
-          graphTitle = variableFilter[0] === "acct_age" ? 'Days Mapping' : '';
-          return graphTitle
-        })
+        .text(function(d){return variableTitles(d)})
   }
+
 }
 
 
