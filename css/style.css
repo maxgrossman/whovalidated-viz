@@ -14,6 +14,7 @@
   width: 50%;
   text-align: center;
 }
+.tabs-title a{font-size: 14px;}
 .tabs-title:hover {
   text-decoration: underline;
 }

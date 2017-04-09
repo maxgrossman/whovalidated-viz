@@ -4,6 +4,10 @@
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.3.1/css/foundation.min.css"
   integrity="sha256-itWEYdFWzZPBG78bJOOiQIn06QCgN/F0wMDcC4nOhxY=" crossorigin="anonymous"/>
+<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+  rel="stylesheet"
+  integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN"
+  crossorigin="anonymous">
 <link href="css/style.css" rel="stylesheet">
 <body>
   <div id="viz">
@@ -15,12 +19,24 @@
       </div>
     </div>
     <div class="row" id="selector">
+      <a onclick="clearAllCheckboxes();">
+        <i class="fa fa-trash-o"></i>
+        <small style="margin-left:1px">clear filters</small>
+      </a>
       <ul class="tabs" data-active-collapse="true" data-tabs id="filter-nav">
         <li class="tabs-title"><a href="#validType">Validator Group</a></li>
         <li class="tabs-title"><a href="#variable">Variable</a></li>
       </ul>
       <div class="tabs-content" data-tabs-content="filter-nav" id="filter-nav-tabs">
         <!-- collapse divs go here -->
+      </div>
+    </div>
+    </br>
+    <div id="visualizations">
+      <div class="row">
+        <div class="small-12 columns" id="groupGraphDiv">
+          <h3 style="text-align:center">Validator Groups</h3>
+        </div>
       </div>
     </div>
   </div>
