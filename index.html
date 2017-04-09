@@ -6,22 +6,25 @@
   integrity="sha256-itWEYdFWzZPBG78bJOOiQIn06QCgN/F0wMDcC4nOhxY=" crossorigin="anonymous"/>
 <link href="css/style.css" rel="stylesheet">
 <body>
-  <div class="row" id="header">
-    <div class="medium-12 columns"><h1>Who Validates?</h1></div>
-    <div class="medium-12 columns">
-      <p><small>This project classifies HOT OSM task validators. Check out the
-        <a href="https://github.com/maxgrossman/whovalidates">methodology</a></small></p>
+  <div id="viz">
+    <div class="row" id="header">
+      <div class="medium-12 columns"><h1>Who Validates?</h1></div>
+      <div class="medium-12 columns">
+        <p><small>This project classifies HOT OSM task validators. Check out the
+          <a href="https://github.com/maxgrossman/whovalidates">methodology</a></small></p>
+      </div>
+    </div>
+    <div class="row" id="selector">
+      <ul class="tabs" data-active-collapse="true" data-tabs id="filter-nav">
+        <li class="tabs-title"><a href="#validType">Validator Group</a></li>
+        <li class="tabs-title"><a href="#variable">Variable</a></li>
+      </ul>
+      <div class="tabs-content" data-tabs-content="filter-nav" id="filter-nav-tabs">
+        <!-- collapse divs go here -->
+      </div>
     </div>
   </div>
-  <div class="row" id="selector">
-    <ul class="tabs" data-active-collapse="true" data-tabs id="filter-nav">
-    	<li class="tabs-title"><a href="#validType">Validator Group</a></li>
-      <li class="tabs-title"><a href="#variable">Variable</a></li>
-    </ul>
-    <div class="tabs-content" data-tabs-content="filter-nav" id="filter-nav-tabs">
-      <!-- collapse divs go here -->
-    </div>
-  </div>
+
 </body>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="

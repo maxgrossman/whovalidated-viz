@@ -20,10 +20,9 @@ function fillClassFieldTabs() {
     '<div class="tabs-panel" id="validType">' + classTab.join('') + '</div>'
   )
   // fill variable tab with variable checkboxes
-  variables = Object.keys(
-    validatorData.values()[0]).slice(2,
-      Object.keys(validatorData.values()[0]).length
-  )
+  variables = Object.keys(validatorData.values()[0])
+  variables = variables.filter(function(a){if(!(a.match(/pca/))){return a}}).filter(
+    function(a){if(!(a.match(/user/))){return a}})
   for(i=0;i<variables.length;i++) {
     variables[i] = '<div class="checkbox"><label><input type="checkbox" onchange="filter()">' + variables[i] + '</label></div><br>'
   }
