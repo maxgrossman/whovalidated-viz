@@ -1,6 +1,7 @@
 // function to generate filters to visualize different barcharts
 function filter() {
   activeFilters = []
+  // add selected filters in checkboxes to activeFilters
   checkboxes = $("#filter-nav-tabs input[type=checkbox]");
   for (i=0; i<checkboxes.length; i++) {
     if(checkboxes[i].checked === true) {
@@ -9,51 +10,21 @@ function filter() {
         filterValue: checkboxes[i].value
       })
     }
-    // // # reformat the data on checks to make it easier to work with
-    // // ? combine this into what's above
-    // filterData = d3.nest().key(function(d){ return d.filterKey })
-    //   .rollup(function(value){
-    //     var valuesArray = [];
-    //     value.forEach(function(d){
-    //       valuesArray.push(d.filterValue);
-    //     });
-    //     return valuesArray;
-    //   }).entries(activeFilters)
-    // // # update the html on the page to let the user know what filters are active
-    // var keyGroups = [];
-    // $.each(filterData,function(i,filterKey){
-    //   var keyGroupHtml = '(<b>' + filterKey.key + '</b> <small>=</small> ';
-    //   var valueGroups = [];
-    //   console.log(filterKey)
-    //   $.each(filterKey.value, function(j,filterValue){
-    //     valueGroups.push('<b>' + filterValue + '</b>');
-    //   })
-    //   keyGroupHtml += valueGroups.join(" <small>OR</small> ") + ")"
-    //   keyGroups.push(keyGroupHtml);
-    // });
-    // $('#filter-active-text').html(keyGroups.join(" <small>AND</small> "));
-    // // # filter the data
-    // var filterKeyCount = filterData.length;
-    // filteredData = data.filter(function(d){
-    //   var passCount = 0;
-    //   var project = d;
-    //   $.each(filterData,function(iKey, filterKey){
-    //     var pass = false;
-    //     var thisKey = filterKey.key;
-    //     $.each(filterKey.value, function(iValue, filterValue){
-    //       // # if any of the filter values for a given key are present, that filter key is passed
-    //       if($.inArray(filterValue, project[thisKey]) !== -1){ pass = true; }
-    //     });
-    //     if(pass === true){ passCount ++; }
-    //   });
-    //   // # if all filter keys are passed, the project passes the filtering
-    //   return passCount === filterKeyCount;
-    // })
-    //   console.log(filteredData.length)
-    // }
   }
-  console.log(activeFilters)
+  // get keys in activeFilters obj as list by setting filter value as key, then
+  // mapping those keys to a list
+  activeFiltersLST = d3.nest().key(function(d){return d.filterValue})
+    .entries(activeFilters).map(function(d){return d.key})
+  // separate this filter list into those defining validator groups and variables
+  groupFilter = activeFiltersLST.filter(
+    function(d){if(parseInt(d))return d}
+  ).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);});
+  variableFilter = activeFiltersLST.filter(
+    function(d){if(!(parseInt(d)))return d}
+  )
+  variableGraph()
 }
+
 // function to clear all checked boxes
 function clearAllCheckboxes(){
   var allCheckboxes = $.find("input:checkbox");
@@ -74,7 +45,6 @@ function fetchData() {
 function fillClassFieldTabs() {
   // fill the validator group tab with validator groups checkboxes
   keys = validatorData.keys()
-  console.log(keys)
   classTab = []
   for(i=0;i<keys.length;i++) {
     thisClass = '<div class="checkbox"><label><input type="checkbox" value="' +
@@ -100,7 +70,9 @@ function fillClassFieldTabs() {
 // function that builds validator groups scatter plot
 function validatorScatter() {
   // get height, width, and margins based on div
-  scattHWplus = {top: 40, right: 100, bottom: 40, left: 100, height: 300, width: 500 - 50 - 50};
+  scattHWplus = {top: 100, right: 100, bottom: 100, left: 100,
+    height: $('#validatorScatter').innerWidth() - 100,
+    width: $('#validatorScatter').innerWidth() - 100 };
   // create tooltip div, used later for interactivity
   var tooltip = d3.select("#validatorScatterDiv").append("div")
     .attr("class", "tooltip")
@@ -139,6 +111,12 @@ function validatorScatter() {
       .attr("class","y kaxis")
       .call(scattYAxis)
 
+    // add title
+    scattSVG.append("text")
+      .attr("x",scattHWplus.width/2)
+      .attr("y", -30)
+      .attr("text-anchor",'middle')
+      .text('Validator Groups')
     // combine pcaX and pcaY for ease of adding to scatter
     // also add class and name
     scattDPs = []
@@ -150,6 +128,37 @@ function validatorScatter() {
       ]
       scattDPs.push(scattDP)
     }
+
+    // add legend
+    var legend = scattSVG.selectAll('.legend')
+        .data(scattDPs).enter()
+        .append('g')
+        .attr('class','legend')
+        .attr('transform',function(d,i){
+          var height = 22;
+          var offset = height * scattDPs.length/2;
+          var horz = -2 * 18;
+          var vert = i * 14;
+          return 'translate(' + (scattHWplus.width + horz*3) + ','
+          +  ((scattHWplus.width-30) - vert) + ')'
+        });
+
+      legend.append('rect')
+        .attr('width',18)
+        .attr('height',18)
+        .style('fill',function(d){return d3.schemeCategory10[d[2]]});
+
+      legend.append('text')
+        .attr("x", 22)
+        .attr('y', 14)
+        .attr("font-size","10px")
+        .text(function(d,i) {
+          validatorType = d[2] === "1" ? 'Non Validator' :
+          d[2] === "2" ? 'Frequent Validator' :
+          d[2] === "3" ? 'Master Validator' : '';
+          return validatorType })
+
+
     // draw scatter plot and add interactivity
     scattSVG.selectAll('.scattDot')
       .data(scattDPs)
@@ -158,7 +167,7 @@ function validatorScatter() {
         .attr("r",4)
         .attr("cx",function(d,i){return scattXScale(d[0])})
         .attr("cy",function(d,i){return scattYScale(d[1])})
-        .attr("fill",function(d,i){return d3.schemeCategory10[d[2]]})
+        .attr("fill",function(d){return d3.schemeCategory10[d[2]]})
         .on("mouseover", function(d) {
           // use encoded class to determine validator type
           validatorType = d[2] === "1" ? 'Non Validator' :
@@ -188,6 +197,78 @@ function validatorScatter() {
           d3.select("#"+d[3]).remove()
           d3.select(this).attr("stroke",'rgba(57,57,57,0)')
         })
+}
+
+function variableGraph() {
+  // decide how to draw graphs. when just one variable, draw normal bar
+  // when more than one to be drawn; normalize, then stack ba
+  if(variableFilter.length===1){
+    // get list of bar chart values and user_name to draw
+    barVar = d3.values(validatorData).map(
+      function(d){return [d.user_name, d[variableFilter[0]],d.class]}).filter(
+      function(d){if(typeof(d[1])==='string')return d}
+    ).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);})
+
+    // if trying to filter by group, subset list to only include
+    if(groupFilter.length>0) {
+      barVar = barVar.filter(function(group) {
+        return groupFilter.map(Number).includes(parseInt(group[2]))}
+      );
+    }
+
+    // add graph svg to div
+    // add scatter to #validatorScatter div
+    var varBarGraph = d3.select("#variableBar").append("svg")
+      .attr("width",scattHWplus.width + scattHWplus.left + scattHWplus.right)
+      .attr("height", scattHWplus.height + scattHWplus.bottom + scattHWplus.bottom)
+      .append('g').attr("transform","translate(" +
+        scattHWplus.left + "," + scattHWplus.top + ")")
+
+      // make scales/axes
+      barVarXScale = d3.scaleLinear()
+        .domain([0,d3.max(barVar,function(d){return d[1]})])
+        .range([0,scattHWplus.width]);
+      barVarYScale = d3.scaleBand()
+        .domain(barVar.map(function(d) {return d[0]}))
+        .range([0, scattHWplus.height])
+        .padding(0.1);
+
+
+      barVarXAxis = d3.axisBottom().scale(barVarXScale)
+      barVarYAxis = d3.axisLeft().scale(barVarYScale);
+
+      varBarGraph.append("g")
+        .attr("class","x kaxis")
+        .attr("transform","translate(0," + scattHWplus.height + ")")
+        .call(barVarXAxis)
+      varBarGraph.append("g")
+        .attr("class","y kaxis")
+        .call(barVarYAxis)
+      // add the bars and rects for chart
+      var bars = varBarGraph.selectAll(".bar")
+        .data(barVar)
+        .enter()
+        .append("g")
+      bars.append("rect")
+        .attr("class","bar")
+        .attr("y",function(d) {
+          return (barVarYScale(d[0])+(barVarYScale.bandwidth()/4))
+        })
+        .attr('x',0)
+        .attr("height",barVarYScale.bandwidth()/2)
+        .attr("width", function(d) {return barVarXScale(d[1])})
+        .attr('fill',function(d) {return d3.schemeCategory10[d[2]]})
+
+      // add title
+      varBarGraph.append("text")
+        .attr("x",scattHWplus.width/2)
+        .attr("y", -30)
+        .attr("text-anchor",'middle')
+        .text(function(d){
+          graphTitle = variableFilter[0] === "acct_age" ? 'Days Mapping' : '';
+          return graphTitle
+        })
+  }
 }
 
 
