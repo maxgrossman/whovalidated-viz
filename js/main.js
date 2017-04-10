@@ -35,7 +35,6 @@ function filter() {
   counter++
   variableGraphDraw()
 }
-
 // function to set rename variable names where relevant
 function variableTitles(d) {
   if(Array.isArray(d)) {
@@ -51,7 +50,13 @@ function variableTitles(d) {
   }
   return graphTitle
 }
-
+// similar to variableTitles, but for group titles
+function groupTitle(k) {
+  keyTitle = k === '1' ? 'Non Validator' :
+   k === '2' ? 'Frequent Validator' :
+   k === '3' ? 'Master Validator' : ''
+  return keyTitle
+}
 // function to clear all checked boxes
 function clearAllCheckboxes(){
   var allCheckboxes = $.find("input:checkbox");
@@ -62,7 +67,7 @@ function clearAllCheckboxes(){
 function fetchData() {
   // load in validator data
   d3.tsv('../data/testvalidates.csv',function(data) {
-    validatorData = d3.map(data, function(d){return d.class})
+    validatorData = d3.map(data, function(d){return d.user_name})
     console.log(validatorData)
     // build tabs
     fillClassFieldTabs()
@@ -71,11 +76,17 @@ function fetchData() {
 // function that builds out class and field tabs
 function fillClassFieldTabs() {
   // fill the validator group tab with validator groups checkboxes
-  keys = validatorData.keys()
+  keys = d3.values(validatorData).map(
+    function(d){return d.class}).filter(
+    function(d){if(typeof(d)==="string") {return d}
+  })
+  keys = $.unique(keys)
+  console.log(keys)
   classTab = []
   for(i=0;i<keys.length;i++) {
+    keyTitle = groupTitle(keys[i])
     thisClass = '<div class="checkbox"><label><input type="checkbox" value="' +
-    validatorData.keys()[i] + '" onchange="filter()">' + validatorData.keys()[i] + '</label></div><br>'
+    keys[i] + '" onchange="filter()">' + keyTitle + '</label></div><br>'
     classTab.push(thisClass)
   }
   $('#filter-nav-tabs').append(
@@ -86,6 +97,7 @@ function fillClassFieldTabs() {
     function(a){if(!(a.match(/pca/))){return a}}).filter(
     function(a){if(!(a.match(/user/))){return a}}).filter(
     function(a){if(!(a.match(/class/))){return a}})
+  console.log(variables)
   // change variable names in dropdown
   variablesText = variables.map(function(d) {return variableTitles(d)})
   for(i=0;i<variables.length;i++) {
@@ -123,12 +135,12 @@ function validatorScatter() {
 
     // make scattXScale and scattYScale & scattXAxis and scattYAxis
     scattXScale = d3.scaleLinear()
-      .domain([d3.min(pcaX,function(d){return d})
-              ,d3.max(pcaX,function(d){return d})])
+      .domain([d3.min(pcaX.map(Number))
+              ,d3.max(pcaX.map(Number))])
       .range([0,(scattHWplus.width)]);
     scattYScale = d3.scaleLinear()
-      .domain([d3.min(pcaY,function(d){return d})
-              ,d3.max(pcaY,function(d){return d})])
+      .domain([d3.min(pcaY.map(Number))
+              ,d3.max(pcaY.map(Number))])
       .range([scattHWplus.height,0]);
     scattXAxis = d3.axisBottom().scale(scattXScale)
     scattYAxis = d3.axisLeft().scale(scattYScale).tickFormat(d3.format("d"));
@@ -154,42 +166,33 @@ function validatorScatter() {
     for(i=0;i<pcaX.length;i++) {
       scattDP = [
         pcaX[i],pcaY[i],
-        validatorData.keys()[i],
-        validatorData.values()[i]['user_name']
+        validatorData["$"+validatorData.keys()[i]].class,
+        validatorData["$"+validatorData.keys()[i]].user_name,
       ]
       scattDPs.push(scattDP)
     }
 
     // add legend
     var legend = scattSVG.selectAll('.legend')
-        .data(scattDPs).enter()
+        .data(keys).enter()
         .append('g')
         .attr('class','legend')
         .attr('transform',function(d,i){
-          var height = 22;
-          var offset = height * scattDPs.length/2;
-          var horz = -2 * 18;
           var vert = i * 14;
-          return 'translate(' + (scattHWplus.width + horz*3) + ','
-          +  ((scattHWplus.width-30) - vert) + ')'
+          return 'translate(10' + ','
+          +  (vert) + ')'
         });
 
       legend.append('rect')
         .attr('width',18)
         .attr('height',18)
-        .style('fill',function(d){return d3.schemeCategory10[d[2]]});
+        .style('fill',function(d){return d3.schemeCategory10[d]});
 
       legend.append('text')
         .attr("x", 22)
         .attr('y', 14)
         .attr("font-size","10px")
-        .text(function(d,i) {
-          validatorType = d[2] === "1" ? 'Non Validator' :
-          d[2] === "2" ? 'Frequent Validator' :
-          d[2] === "3" ? 'Master Validator' : '';
-          return validatorType })
-
-
+        .text(function(d) { return groupTitle(d) })
     // draw scatter plot and add interactivity
     scattSVG.selectAll('.scattDot')
       .data(scattDPs)
@@ -223,16 +226,14 @@ function validatorScatter() {
         })
 
 }
-
 // function to draw variable graph after filters selected
 function variableGraphDraw() {
   // remove current graph before adding the new one
   d3.select("#variableBar").select("svg").remove();
-  // function to choose graph title
-
   // decide how to draw graphs. when just one variable, draw normal bar
   // when more than one to be drawn; normalize, then stack ba
   if(variableFilter.length===1){
+
     // get list of bar chart values and user_name to draw
     barVar = d3.values(validatorData).map(
       function(d){return [d.user_name, d[variableFilter[0]],d.class]}).filter(
@@ -263,7 +264,6 @@ function variableGraphDraw() {
         .range([0, scattHWplus.height])
         .padding(0.1);
 
-
       barVarXAxis = d3.axisBottom().scale(barVarXScale)
       barVarYAxis = d3.axisLeft().scale(barVarYScale);
 
@@ -293,7 +293,7 @@ function variableGraphDraw() {
           varBarGraph.append("text")
             .attr("id",d[0])
             .attr("x",barVarXScale(d[1])+4)
-            .attr("y", (barVarYScale(d[0])+(barVarYScale.bandwidth()/2)))
+            .attr("y", (barVarYScale(d[0])+(barVarYScale.bandwidth()/1.9)))
             .style("font-size","12px")
             .text(d[1])
           d3.select(this).attr("stroke",'rgba(57,57,57,1)')
@@ -310,7 +310,12 @@ function variableGraphDraw() {
         .attr("text-anchor",'middle')
         .text(function(){return variableTitles(variableFilter)})
   }
+  else {
+    barVar = d3.values(validatorData).map(
+      function(d){return d3.values(d)}).filter(
+      function(d){if(typeof(d[1])==='string')return d})
 
+  }
 }
 
 
