@@ -1,27 +1,38 @@
 // function to generate filters to visualize different barcharts
+counter=0;
 function filter() {
-  activeFilters = []
-  // add selected filters in checkboxes to activeFilters
-  checkboxes = $("#filter-nav-tabs input[type=checkbox]");
-  for (i=0; i<checkboxes.length; i++) {
-    if(checkboxes[i].checked === true) {
-      activeFilters.push({
-        filterKey: checkboxes[i].name,
-        filterValue: checkboxes[i].value
-      })
+  // for all other instaces less the page load instance, filter what to draw
+  if(counter>0) {
+    activeFilters = []
+    // add selected filters in checkboxes to activeFilters
+    checkboxes = $("#filter-nav-tabs input[type=checkbox]");
+    for (i=0; i<checkboxes.length; i++) {
+      if(checkboxes[i].checked === true) {
+        activeFilters.push({
+          filterKey: checkboxes[i].name,
+          filterValue: checkboxes[i].value
+        })
+      }
     }
+    // get keys in activeFilters obj as list by setting filter value as key, then
+    // mapping those keys to a list
+    activeFiltersLST = d3.nest().key(function(d){return d.filterValue})
+      .entries(activeFilters).map(function(d){return d.key})
+    // separate this filter list into those defining validator groups and variables
+    groupFilter = activeFiltersLST.filter(
+      function(d){if(parseInt(d))return d}
+    ).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);});
+    variableFilter = activeFiltersLST.filter(
+      function(d){if(!(parseInt(d)))return d}
+    )
   }
-  // get keys in activeFilters obj as list by setting filter value as key, then
-  // mapping those keys to a list
-  activeFiltersLST = d3.nest().key(function(d){return d.filterValue})
-    .entries(activeFilters).map(function(d){return d.key})
-  // separate this filter list into those defining validator groups and variables
-  groupFilter = activeFiltersLST.filter(
-    function(d){if(parseInt(d))return d}
-  ).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);});
-  variableFilter = activeFiltersLST.filter(
-    function(d){if(!(parseInt(d)))return d}
-  )
+  else {
+   variableFilter = Object.keys(validatorData.values()[0]).filter(
+        function(a){if(!(a.match(/pca/))){return a}}).filter(
+        function(a){if(!(a.match(/user/))){return a}}).filter(
+        function(a){if(!(a.match(/class/))){return a}})
+  }
+  counter++
   variableGraphDraw()
 }
 
@@ -71,8 +82,7 @@ function fillClassFieldTabs() {
     '<div class="tabs-panel" id="validType">' + classTab.join('') + '</div>'
   )
   // fill variable tab with variable checkboxes
-  variables = Object.keys(validatorData.values()[0])
-  variables = variables.filter(
+  variables = Object.keys(validatorData.values()[0]).filter(
     function(a){if(!(a.match(/pca/))){return a}}).filter(
     function(a){if(!(a.match(/user/))){return a}}).filter(
     function(a){if(!(a.match(/class/))){return a}})
@@ -85,6 +95,7 @@ function fillClassFieldTabs() {
   $('#filter-nav-tabs').append(
     '<div class="tabs-panel" id="variable">' + variables.join('') + '</div>'
   )
+  filter()
   validatorScatter()
 }
 // function that builds validator groups scatter plot
