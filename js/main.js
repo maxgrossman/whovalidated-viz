@@ -193,6 +193,8 @@ function validatorScatter() {
         .attr('y', 14)
         .attr("font-size","10px")
         .text(function(d) { return groupTitle(d) })
+
+
     // draw scatter plot and add interactivity
     scattSVG.selectAll('.scattDot')
       .data(scattDPs)
@@ -236,7 +238,7 @@ function variableGraphDraw() {
 
     // get list of bar chart values and user_name to draw
     barVar = d3.values(validatorData).map(
-      function(d){return [d.user_name, d[variableFilter[0]],d.class]}).filter(
+      function(d){return [d.user_name, d.class, d[variableFilter[0]]]}).filter(
       function(d){if(typeof(d[1])==='string')return d}
     ).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);})
 
@@ -287,7 +289,7 @@ function variableGraphDraw() {
         .attr('x',0)
         .attr("height",barVarYScale.bandwidth()/2)
         .attr("width", function(d) {return barVarXScale(d[1])})
-        .attr('fill',function(d) {return d3.schemeCategory10[d[2]]})
+        .attr('fill',function(d) {return d3.schemeCategory10[d[1]]})
         .on('mouseover',function(d){
           // add validator text to svg
           varBarGraph.append("text")
@@ -311,10 +313,45 @@ function variableGraphDraw() {
         .text(function(){return variableTitles(variableFilter)})
   }
   else {
-    barVar = d3.values(validatorData).map(
-      function(d){return d3.values(d)}).filter(
-      function(d){if(typeof(d[1])==='string')return d})
 
+    barVar = d3.values(validatorData).map(function(d){
+      filterDPs = []
+      for(i=0;i<variableFilter.length;i++){filterDPs.push(d[variableFilter[i]])}
+		   return [d.user_name, d.class].concat(filterDPs)}).filter(
+         function(d){if(typeof(d[1])==='string')return d}).sort(
+         function(a,b){return parseInt(a[1])<parseInt(b[1]);})
+    // function to normalize each value before mapping.
+    // takes each value from each of the users, normalizes them,
+    // then adds them back
+    var normVals;
+    function normalizeValues() {
+      // for elements, 2 to length of barVar normalize
+      for(i=2;i<barVar[0].length;i++){
+      normVals = []
+        // push ith element for each user to a normVals list
+        for(j=0;j<barVar.length;j++){
+          normVals.push(parseInt(barVar[j][i]))
+        }
+        // take that normVals list and normalize values to 100
+        //var ratio = Math.max.apply(Math, normVals) / 100
+        //console.log(ratio)
+        console.log(normVals)
+        range = (d3.max(normVals) - d3.min(normVals))
+        console.log(range)
+        min = d3.min(normVals)
+        console.log(min)
+        normVals = normVals.map(function(d){
+          normalized = (d-min)/range
+          return normalized
+        })
+        // take the normalized values and add them back to the users.
+        for(j=0;j<barVar.length;j++){
+          barVar[j][i] = normVals[j]
+        }
+      }
+    }
+    normalizeValues()
+    console.log(barVar)
   }
 }
 
