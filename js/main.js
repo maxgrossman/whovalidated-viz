@@ -1,7 +1,7 @@
 // function to generate filters to visualize different barcharts
 counter=0;
 function filter() {
-  // for all other instaces less the page load instance, filter what to draw
+  // for all other instaces except the page load instance, filter what to draw
   if(counter>0) {
     activeFilters = []
     // add selected filters in checkboxes to activeFilters
@@ -9,7 +9,6 @@ function filter() {
     for (i=0; i<checkboxes.length; i++) {
       if(checkboxes[i].checked === true) {
         activeFilters.push({
-          filterKey: checkboxes[i].name,
           filterValue: checkboxes[i].value
         })
       }
@@ -110,12 +109,12 @@ function fillClassFieldTabs() {
   filter()
   validatorScatter()
 }
+// get height, width, and margins based on div
+var scattHWplus = {top: 100, right: 100, bottom: 100, left: 100,
+  height: $('#validatorScatter').innerWidth() - 100,
+  width: $('#validatorScatter').innerWidth() - 100 };
 // function that builds validator groups scatter plot
 function validatorScatter() {
-  // get height, width, and margins based on div
-  scattHWplus = {top: 100, right: 100, bottom: 100, left: 100,
-    height: $('#validatorScatter').innerWidth() - 100,
-    width: $('#validatorScatter').innerWidth() - 100 };
   // create tooltip div, used later for interactivity
   var tooltip = d3.select("#validatorScatterDiv").append("div")
     .attr("class", "tooltip")
@@ -234,29 +233,26 @@ function variableGraphDraw() {
   d3.select("#variableBar").select("svg").remove();
   // decide how to draw graphs. when just one variable, draw normal bar
   // when more than one to be drawn; normalize, then stack ba
+  // build the graph
+  var varBarGraph = d3.select("#variableBar").append("svg")
+    .attr("width",scattHWplus.width + scattHWplus.left + scattHWplus.right)
+    .attr("height", scattHWplus.height + scattHWplus.bottom + scattHWplus.bottom)
+    .append('g').attr("transform","translate(" +
+      scattHWplus.left + "," + scattHWplus.top + ")")
+
   if(variableFilter.length===1){
 
     // get list of bar chart values and user_name to draw
-    barVar = d3.values(validatorData).map(
-      function(d){return [d.user_name, d.class, d[variableFilter[0]]]}).filter(
-      function(d){if(typeof(d[1])==='string')return d}
-    ).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);})
+    barVar = validatorData.values().map(
+      function(d){return _.pick(d,['user_name', 'class', variableFilter[0]])
+    }).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);})
 
     // if trying to filter by group, subset list to only include
     if(groupFilter.length>0) {
       barVar = barVar.filter(function(group) {
-        return groupFilter.map(Number).includes(parseInt(group[2]))}
+        return groupFilter.map(Number).includes(parseInt(group[1]))}
       );
     }
-
-    // add graph svg to div
-    // add scatter to #validatorScatter div
-    var varBarGraph = d3.select("#variableBar").append("svg")
-      .attr("width",scattHWplus.width + scattHWplus.left + scattHWplus.right)
-      .attr("height", scattHWplus.height + scattHWplus.bottom + scattHWplus.bottom)
-      .append('g').attr("transform","translate(" +
-        scattHWplus.left + "," + scattHWplus.top + ")")
-
       // make scales/axes
       barVarXScale = d3.scaleLinear()
         .domain([0,d3.max(barVar,function(d){return parseInt(d[1])})])
@@ -313,45 +309,93 @@ function variableGraphDraw() {
         .text(function(){return variableTitles(variableFilter)})
   }
   else {
-
-    barVar = d3.values(validatorData).map(function(d){
-      filterDPs = []
-      for(i=0;i<variableFilter.length;i++){filterDPs.push(d[variableFilter[i]])}
-		   return [d.user_name, d.class].concat(filterDPs)}).filter(
-         function(d){if(typeof(d[1])==='string')return d}).sort(
-         function(a,b){return parseInt(a[1])<parseInt(b[1]);})
+    barVar = validatorData.values().map(function(d){
+		    return _.pick(d,['user_name', 'class'].concat(variableFilter))
+    })
+    for(var bar in barVar) {
+      if(barVar.hasOwnProperty(bar)){
+        barVar[bar][barVar[bar].class] = {}
+        barVar[bar][barVar[bar].class][barVar[bar].user_name] = _.omit(barVar[bar],
+          ['user_name','class',barVar[bar].class]
+        )
+        barVar[bar] = _.pick(barVar[bar],[barVar[bar].class])
+      }
+    }
+    var BarKeys = _.keys(d3.values(d3.values(barVar[0])[0])[0])
     // function to normalize each value before mapping.
     // takes each value from each of the users, normalizes them,
-    // then adds them back
+    // then slices them by number of slices such that
+    // the normalized range for a given variable is scaled to 1 divided by
+    // number of variables being mapped.
+    // this way, the max value stays at 1, and a max value for a category
+    // is 1/slices. this is not true to analysis per say, but it allows
+    // a way to visualize how well different people do in different
+    var validators = barVar.map(function(d) {return _.keys(d3.values(d)[0])[0]})
     var normVals;
     function normalizeValues() {
-      // for elements, 2 to length of barVar normalize
-      for(i=2;i<barVar[0].length;i++){
-      normVals = []
+      slices = BarKeys.length
+      // normalize each users' values for given variable based on other users'
+      _.forEach(d3.values(d3.values(barVar[0])[0])[0],function(key,value){
+        normVals = []
         // push ith element for each user to a normVals list
         for(j=0;j<barVar.length;j++){
-          normVals.push(parseInt(barVar[j][i]))
+          normVals.push(parseInt(d3.values(d3.values(barVar[j])[0])[0][value]))
         }
-        // take that normVals list and normalize values to 100
-        //var ratio = Math.max.apply(Math, normVals) / 100
-        //console.log(ratio)
-        console.log(normVals)
         range = (d3.max(normVals) - d3.min(normVals))
-        console.log(range)
         min = d3.min(normVals)
-        console.log(min)
         normVals = normVals.map(function(d){
           normalized = (d-min)/range
-          return normalized
+          nomalizedSliced = normalized/slices
+          return nomalizedSliced
         })
         // take the normalized values and add them back to the users.
         for(j=0;j<barVar.length;j++){
-          barVar[j][i] = normVals[j]
+          d3.values(d3.values(barVar[j])[0])[0][value] = normVals[j]
         }
-      }
+      })
+      // sort based on largest sum of variables
+      barVar.sort(function(a,b){
+        // sum the normalized stacks for a and b
+        a = d3.values(a)[0][(_.keys(d3.values(a)[0])[0])]
+        a = d3.values(a).reduce(function(a,b){return a + b},0)
+        b = d3.values(b)[0][(_.keys(d3.values(b)[0])[0])]
+        b = d3.values(b).reduce(function(a,b){return a + b},0)
+        return a<b
+      })
     }
     normalizeValues()
-    console.log(barVar)
+    // make scales/axes
+    barVarXScale = d3.scaleLinear()
+       .domain([0,1])
+       .range([0,scattHWplus.width]);
+    barVarYScale = d3.scaleBand()
+       .domain(validators)
+       .range([0, scattHWplus.height])
+       .padding(0.1);
+    barVarColorScale = d3.scaleOrdinal()
+      .domain(keys)
+      .range(d3.schemeCategory10.slice(0,slices))
+    barVarXAxis = d3.axisBottom().scale(barVarXScale)
+    barVarYAxis = d3.axisLeft().scale(barVarYScale);
+    var stack = d3.stack()
+      .keys(BarKeys)(barVar.map(function(d)
+      { return d3.values(d)[0][(_.keys(d3.values(d)[0])[0])] }))
+    console.log(stack)
+    varBarGraph.append("g")
+       .attr("class","x kaxis")
+       .attr("transform","translate(0," + scattHWplus.height + ")")
+      .call(barVarXAxis)
+    varBarGraph.append("g")
+      .attr("class","y kaxis")
+      .call(barVarYAxis)
+    varBarGraph.append("g")
+      .selectAll('g')
+      .data(stack)
+      .enter().append("g")
+        .attr("fill",function(d){return barVarColorScale(d.key)})
+      .selectAll('rect')
+      .data(function(d) {return d;})
+      .enter().append('rect')
   }
 }
 
