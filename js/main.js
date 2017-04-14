@@ -36,24 +36,24 @@ function filter() {
 }
 // function to set rename variable names where relevant
 function variableTitles(d) {
-  if(Array.isArray(d)) {
-    if(d.length===1) {
-      graphTitle = variableFilter[0] === "acct_age" ? 'Days Mapping' :
-      variableFilter[0] === "validations" ? 'Validated Squares' :
-      variableFilter[0] === "mapping_freq" ? 'Mapping Frequency' : '';
-    }
-  } else {
-    graphTitle = d === "acct_age" ? 'Days Mapping' :
-    d === "validations" ? 'Validated Squares' :
-    d === "mapping_freq" ? 'Mapping Frequency' : '';
-  }
-  return graphTitle
+      graphTitle = d === "acct_age" ? 'Days Mapping' :
+      d === "validations" ? 'Validated Squares' :
+      d === "build_count_add" ? 'Added Buildings' :
+      d === "build_count_mod" ? 'Modified Buildings':
+      d === "changesets" ? 'Changesets' :
+      d === "josm_edits" ? 'JOSM Edits' :
+      d === "poi_count_add" ? 'Points of Interest Added' :
+      d === "road_km_add" ? 'Road Added (km)' :
+      d === "road_km_mod" ? 'Road Modified (km) ' :
+      d === "waterway_km_add" ? 'Waterway Added (km)' :
+      d === "mapping_freq" ? 'Mapping Frequency' : '';
+      return graphTitle
 }
 // similar to variableTitles, but for group titles
 function groupTitle(k) {
-  keyTitle = k === '1' ? 'Non Validator' :
-   k === '2' ? 'Frequent Validator' :
-   k === '3' ? 'Master Validator' : ''
+  keyTitle = k === '0' ? 'Non Validator' :
+   k === '1' ? 'Frequent Validator' :
+   k === '2' ? 'Master Validator' : ''
   return keyTitle
 }
 // function to clear all checked boxes
@@ -65,7 +65,7 @@ function clearAllCheckboxes(){
 // function to fetch
 function fetchData() {
   // load in validator data
-  d3.tsv('../data/testvalidates.csv',function(data) {
+  d3.csv('../data/validatorsPCAclassified.csv',function(data) {
     validatorData = d3.map(data, function(d){return d.user_name})
     console.log(validatorData)
     // build tabs
@@ -76,11 +76,10 @@ function fetchData() {
 function fillClassFieldTabs() {
   // fill the validator group tab with validator groups checkboxes
   keys = d3.values(validatorData).map(
-    function(d){return d.class}).filter(
+    function(d){return d.kmeansClass}).filter(
     function(d){if(typeof(d)==="string") {return d}
   })
   keys = $.unique(keys)
-  console.log(keys)
   classTab = []
   for(i=0;i<keys.length;i++) {
     keyTitle = groupTitle(keys[i])
@@ -96,10 +95,11 @@ function fillClassFieldTabs() {
     function(a){if(!(a.match(/pca/))){return a}}).filter(
     function(a){if(!(a.match(/user/))){return a}}).filter(
     function(a){if(!(a.match(/class/))){return a}})
-  console.log(variables)
+  // final column is classes, we already gave that its own drop down so not here
+  variables = variables.slice(9,variables.length-1)
   // change variable names in dropdown
   variablesText = variables.map(function(d) {return variableTitles(d)})
-  for(i=0;i<variables.length;i++) {
+  for(i=0;i<(variables.length);i++) {
     variables[i] = '<div class="checkbox"><label><input type="checkbox" value="' +
     variables[i] + '" onchange="filter()">' + variablesText[i] + '</label></div><br>'
   }
@@ -127,9 +127,9 @@ function validatorScatter() {
       scattHWplus.left + "," + scattHWplus.top + ")")
 
     // get pca_x and pca_y values
-    pcaX = d3.values(validatorData).map(function(d){return d.pca_x})
+    pcaX = d3.values(validatorData).map(function(d){return d.c1})
       .filter(function(d){if(typeof(d)==='string')return d})
-    pcaY = d3.values(validatorData).map(function(d){return d.pca_y})
+    pcaY = d3.values(validatorData).map(function(d){return d.c2})
       .filter(function(d){if(typeof(d)==='string')return d})
 
     // make scattXScale and scattYScale & scattXAxis and scattYAxis
@@ -165,7 +165,7 @@ function validatorScatter() {
     for(i=0;i<pcaX.length;i++) {
       scattDP = [
         pcaX[i],pcaY[i],
-        validatorData["$"+validatorData.keys()[i]].class,
+        validatorData["$"+validatorData.keys()[i]].kmeansClass,
         validatorData["$"+validatorData.keys()[i]].user_name,
       ]
       scattDPs.push(scattDP)
@@ -199,31 +199,36 @@ function validatorScatter() {
       .data(scattDPs)
       .enter().append("circle")
         .attr("class","scattDot")
-        .attr("r",4)
+        .attr("r",3)
         .attr("cx",function(d,i){return scattXScale(d[0])})
         .attr("cy",function(d,i){return scattYScale(d[1])})
         .attr("fill",function(d){return d3.schemeCategory10[d[2]]})
+        .attr("fill-opacity", '0.6')
         .on("mouseover", function(d) {
-          // use encoded class to determine validator type
-          validatorType = d[2] === "1" ? 'Non Validator' :
-          d[2] === "2" ? 'Frequent Validator' :
-          d[2] === "3" ? 'Master Validator' : '';
           // get mouse coordinates to place tooltip
           mouseCoords = d3.mouse(this)
+          //get username as username less the spaces
+          id = d[3].replace(/\s/g, '');
           // add validator text to svg
           scattSVG.append("text")
-            .attr("id",d[3])
+            .attr("id",id)
             .attr("x",mouseCoords[0] + 10)
             .attr("y",mouseCoords[1]-10)
             .style("font-size","10px")
             .text(function() {return d[3]})
 
           //focus on current scatter .dot
-          d3.select(this).attr("stroke",'rgba(57,57,57,1)')
+          this.parentElement.appendChild(this);
+          d3.select(this)
+            .attr("stroke",'rgba(250,250,250,1)')
+            .attr("fill-opacity", '0.9')
+
         })
         .on("mouseout",function(d) {
-          d3.select("#"+d[3]).remove()
-          d3.select(this).attr("stroke",'rgba(57,57,57,0)')
+          d3.select("#"+id).remove()
+          d3.select(this)
+            .attr("stroke",'rgba(250,250,250,0)')
+            .attr("fill-opacity", '0.6')
         })
 
 }
@@ -380,7 +385,6 @@ function variableGraphDraw() {
     var stack = d3.stack()
       .keys(BarKeys)(barVar.map(function(d)
       { return d3.values(d)[0][(_.keys(d3.values(d)[0])[0])] }))
-    console.log(stack)
     varBarGraph.append("g")
        .attr("class","x kaxis")
        .attr("transform","translate(0," + scattHWplus.height + ")")
