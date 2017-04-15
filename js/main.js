@@ -49,6 +49,23 @@ function variableTitles(d) {
       d === "mapping_freq" ? 'Mapping Frequency' : '';
       return graphTitle
 }
+// functoin to properly label x axis for horizontal bar
+function variableAxisTitle(d) {
+      axisLabel = d === "acct_age" ? 'days' :
+      d === "validations" ? 'sqaures' :
+      d === "build_count_add" ? 'buildings' :
+      d === "build_count_mod" ? 'buildings':
+      d === "changesets" ? 'changesets' :
+      d === "josm_edits" ? 'edits' :
+      d === "poi_count_add" ? 'points of interest' :
+      d === "road_km_add" ? 'road (km)' :
+      d === "road_km_mod" ? 'km (km)' :
+      d === "waterway_km_add" ? 'waterway (km)' :
+      d === "mapping_freq" ? 'frequency (days)' : '';
+      return axisLabel
+}
+
+
 // similar to variableTitles, but for group titles
 function groupTitle(k) {
   keyTitle = k === '0' ? 'Non Validator' :
@@ -111,9 +128,9 @@ function fillClassFieldTabs() {
   validatorScatter()
 }
 // get height, width, and margins based on div
-var scattHWplus = {top: 100, right: 100, bottom: 100, left: 100,
-  height: $('#validatorScatter').innerWidth() - 400,
-  width: $('#validatorScatter').innerWidth() - 150 };
+var scattHWplus = {top: 100, right: 100, bottom: 100, left: 40,
+  height: $('#validatorScatter').innerWidth() - 100,
+  width: $('#validatorScatter').innerWidth() };
 // function that builds validator groups scatter plot
 function validatorScatter() {
   // create tooltip div, used later for interactivity
@@ -158,7 +175,7 @@ function validatorScatter() {
     scattSVG.append('text')
       .attr('class','y label')
       .attr('text-anchor','end')
-      .attr('y', -45)
+      .attr('y', -40)
       .attr('dy','.75em')
       .attr('transform','rotate(-90)')
       .text('First Principal Component')
@@ -166,7 +183,7 @@ function validatorScatter() {
       .attr('class','x label')
       .attr('text-anchor','end')
       .attr('x', scattHWplus.width-(scattHWplus.right-35))
-      .attr('y', scattHWplus.height+45)
+      .attr('y', scattHWplus.height+30)
       .attr('dy','.75em')
       .text('Second Principal Component')
 
@@ -267,11 +284,12 @@ function variableGraphDraw() {
     barVar = validatorData.values().map(function(d)
       {return _.pick(d,['user_name', 'kmeansClass', variableFilter[0]])}).sort(function(a,b)
       {return parseInt(b[variableFilter[0]])-parseInt(a[variableFilter[0]]);})
-
+    barVar = _.groupBy(barVar,'kmeansClass')
+    barVar = barVar[2].concat(barVar[1]).concat(barVar[0])
     if(groupFilter.length>0) {
       barVar = barVar.filter(function(d) {
         return groupFilter.map(Number).includes(parseInt(d.kmeansClass))
-      }) 
+      })
     }
       // make scales/axes
       barVarXScale = d3.scaleLinear()
@@ -338,7 +356,8 @@ function variableGraphDraw() {
             .attr("y",-25)
             .attr('x',barVarXScale(barVariable)/2)
             .style("font-size","12px")
-            .text(d.user_name + ": " + d[variableFilter[0]])
+            .text(d.user_name + ": " + d[variableFilter[0]]
+             + " " + variableAxisTitle(variableFilter[0]))
         })
         .on('mouseout',function(d){
           d3.select(this).attr("height",barVarYScale.bandwidth()/2)
@@ -351,7 +370,23 @@ function variableGraphDraw() {
         .attr("x",scattHWplus.width/2)
         .attr("y", -30)
         .attr("text-anchor",'middle')
-        .text(function(){return variableTitles(variableFilter)})
+        .text(variableTitles(variableFilter))
+
+      // legend title too
+      varBarGraph.append('text')
+        .attr('class','x label')
+        .attr('text-anchor','end')
+        .attr('x', scattHWplus.width-20)
+        .attr('y', scattHWplus.height+30)
+        .attr('dy','.75em')
+        .text(variableAxisTitle(variableFilter[0]))
+      varBarGraph.append('text')
+        .attr('class','y label')
+        .attr('text-anchor','end')
+        .attr('y', -40)
+        .attr('dy','.75em')
+        .attr('transform','rotate(-90)')
+        .text('OSM Users')
   }
   else {
     barVar = validatorData.values().map(function(d){
