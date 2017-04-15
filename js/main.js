@@ -79,6 +79,7 @@ function fillClassFieldTabs() {
     function(d){return d.kmeansClass}).filter(
     function(d){if(typeof(d)==="string") {return d}
   })
+  // TODO: MAKE THIS WORK IN SAFARI
   keys = $.unique(keys)
   classTab = []
   for(i=0;i<keys.length;i++) {
@@ -111,8 +112,8 @@ function fillClassFieldTabs() {
 }
 // get height, width, and margins based on div
 var scattHWplus = {top: 100, right: 100, bottom: 100, left: 100,
-  height: $('#validatorScatter').innerWidth() - 100,
-  width: $('#validatorScatter').innerWidth() - 100 };
+  height: $('#validatorScatter').innerWidth() - 400,
+  width: $('#validatorScatter').innerWidth() - 150 };
 // function that builds validator groups scatter plot
 function validatorScatter() {
   // create tooltip div, used later for interactivity
@@ -142,7 +143,7 @@ function validatorScatter() {
               ,d3.max(pcaY.map(Number))])
       .range([scattHWplus.height,0]);
     scattXAxis = d3.axisBottom().scale(scattXScale)
-    scattYAxis = d3.axisLeft().scale(scattYScale).tickFormat(d3.format("d"));
+    scattYAxis = d3.axisLeft().scale(scattYScale);
 
     // draw x and y axes
     scattSVG.append("g")
@@ -152,6 +153,22 @@ function validatorScatter() {
     scattSVG.append("g")
       .attr("class","y kaxis")
       .call(scattYAxis)
+
+    // label axes
+    scattSVG.append('text')
+      .attr('class','y label')
+      .attr('text-anchor','end')
+      .attr('y', -45)
+      .attr('dy','.75em')
+      .attr('transform','rotate(-90)')
+      .text('First Principal Component')
+    scattSVG.append('text')
+      .attr('class','x label')
+      .attr('text-anchor','end')
+      .attr('x', scattHWplus.width-(scattHWplus.right-35))
+      .attr('y', scattHWplus.height+45)
+      .attr('dy','.75em')
+      .text('Second Principal Component')
 
     // add title
     scattSVG.append("text")
@@ -193,13 +210,12 @@ function validatorScatter() {
         .attr("font-size","10px")
         .text(function(d) { return groupTitle(d) })
 
-
     // draw scatter plot and add interactivity
     scattSVG.selectAll('.scattDot')
       .data(scattDPs)
       .enter().append("circle")
         .attr("class","scattDot")
-        .attr("r",3)
+        .attr("r",4)
         .attr("cx",function(d,i){return scattXScale(d[0])})
         .attr("cy",function(d,i){return scattYScale(d[1])})
         .attr("fill",function(d){return d3.schemeCategory10[d[2]]})
@@ -208,7 +224,7 @@ function validatorScatter() {
           // get mouse coordinates to place tooltip
           mouseCoords = d3.mouse(this)
           //get username as username less the spaces
-          id = d[3].replace(/\s/g, '');
+          id = d[3].replace(/\s/g, '').replace(/\W/g, '').replace(/\d/g,'')
           // add validator text to svg
           scattSVG.append("text")
             .attr("id",id)
@@ -246,29 +262,34 @@ function variableGraphDraw() {
       scattHWplus.left + "," + scattHWplus.top + ")")
 
   if(variableFilter.length===1){
-
-    // get list of bar chart values and user_name to draw
-    barVar = validatorData.values().map(
-      function(d){return _.pick(d,['user_name', 'class', variableFilter[0]])
-    }).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);})
-
     // if trying to filter by group, subset list to only include
+    // get list of bar chart values and user_name to draw
+    barVar = validatorData.values().map(function(d)
+      {return _.pick(d,['user_name', 'kmeansClass', variableFilter[0]])}).sort(function(a,b)
+      {return parseInt(b[variableFilter[0]])-parseInt(a[variableFilter[0]]);})
+
     if(groupFilter.length>0) {
-      barVar = barVar.filter(function(group) {
-        return groupFilter.map(Number).includes(parseInt(group[1]))}
-      );
+      barVar = barVar.filter(function(d) {
+        return groupFilter.map(Number).includes(parseInt(d.kmeansClass))
+      }) 
     }
       // make scales/axes
       barVarXScale = d3.scaleLinear()
-        .domain([0,d3.max(barVar,function(d){return parseInt(d[1])})])
+        .domain([0,d3.max(barVar,function(d)
+          {return parseInt(d[variableFilter[0]])})])
         .range([0,scattHWplus.width]);
       barVarYScale = d3.scaleBand()
-        .domain(barVar.map(function(d) {return d[0]}))
+        .domain(barVar.map(function(d) {return d.user_name}))
         .range([0, scattHWplus.height])
-        .padding(0.1);
+        .padding(0.1)
 
-      barVarXAxis = d3.axisBottom().scale(barVarXScale)
-      barVarYAxis = d3.axisLeft().scale(barVarYScale);
+      barVarXAxis = d3.axisBottom()
+        .scale(barVarXScale)
+      barVarYAxis = d3.axisLeft()
+        .scale(barVarYScale)
+        .tickFormat(function (d) { return ''; });
+
+
 
       varBarGraph.append("g")
         .attr("class","x kaxis")
@@ -277,33 +298,52 @@ function variableGraphDraw() {
       varBarGraph.append("g")
         .attr("class","y kaxis")
         .call(barVarYAxis)
+      varBarGraph.append('text')
+        .attr("x",scattHWplus.width/2.2)
+        .attr("y",-50)
+        .text(variableTitles(variableFilter[0]))
       // add the bars and rects for chart
       var bars = varBarGraph.selectAll(".bar")
         .data(barVar)
         .enter()
         .append("g")
+
       bars.append("rect")
         .attr("class","bar")
         .attr("y",function(d) {
-          return (barVarYScale(d[0])+(barVarYScale.bandwidth()/4))
+          return (barVarYScale(d.user_name)+(barVarYScale.bandwidth()/4))
         })
         .attr('x',0)
         .attr("height",barVarYScale.bandwidth()/2)
-        .attr("width", function(d) {return barVarXScale(d[1])})
-        .attr('fill',function(d) {return d3.schemeCategory10[d[1]]})
+        .attr("width", function(d) {return barVarXScale(
+          parseInt(d[variableFilter[0]])
+        )})
+        .attr('fill',function(d) {return d3.schemeCategory10[d.kmeansClass]})
         .on('mouseover',function(d){
+          barClass = d.kmeansClass
+          barVariable = d[variableFilter[0]]
           // add validator text to svg
+          id = d.user_name.replace(/\s/g, '').replace(/\W/g, '').replace(/\d/g,'')
+          d3.select(this).attr("height",barVarYScale.bandwidth()*2)
+          varBarGraph.append("rect")
+            .attr("id", id)
+            .attr("class","bar")
+            .attr("y",-20)
+            .attr('x',0)
+            .attr("height",barVarYScale.bandwidth()*8)
+            .attr("width", barVarXScale(barVariable))
+            .attr('fill',function(d) {return d3.schemeCategory10[barClass]})
           varBarGraph.append("text")
-            .attr("id",d[0])
-            .attr("x",barVarXScale(d[1])+4)
-            .attr("y", (barVarYScale(d[0])+(barVarYScale.bandwidth()/1.9)))
+            .attr("id",id)
+            .attr("y",-25)
+            .attr('x',barVarXScale(barVariable)/2)
             .style("font-size","12px")
-            .text(d[1])
-          d3.select(this).attr("stroke",'rgba(57,57,57,1)')
+            .text(d.user_name + ": " + d[variableFilter[0]])
         })
         .on('mouseout',function(d){
-          d3.select("#"+d[0]).remove()
-          d3.select(this).attr("stroke",'rgba(57,57,57,0)')
+          d3.select(this).attr("height",barVarYScale.bandwidth()/2)
+          d3.select("#"+id).remove()
+          d3.select("#"+id).remove()
         })
 
       // add title
