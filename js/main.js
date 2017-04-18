@@ -19,10 +19,13 @@ function filter() {
       .entries(activeFilters).map(function(d){return d.key})
     // separate this filter list into those defining validator groups and variables
     groupFilter = activeFiltersLST.filter(
-      function(d){if(parseInt(d))return d}
-    ).sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);});
+      function(d){if(parseInt(d)>=0)return d}
+    )
+    if(groupFilter.length>1){
+        groupFilter.sort(function(a,b){return parseInt(a[1])<parseInt(b[1]);});
+    }
     variableFilter = activeFiltersLST.filter(
-      function(d){if(!(parseInt(d)))return d}
+      function(d){if(!(parseInt(d)>=0))return d}
     )
   }
   else {
@@ -34,6 +37,7 @@ function filter() {
   counter++
   variableGraphDraw()
 }
+
 // function to set rename variable names where relevant
 function variableTitles(d) {
       graphTitle = d === "acct_age" ? 'Days Mapping' :
@@ -49,6 +53,7 @@ function variableTitles(d) {
       d === "mapping_freq" ? 'Mapping Frequency' : '';
       return graphTitle
 }
+
 // functoin to properly label x axis for horizontal bar
 function variableAxisTitle(d) {
       axisLabel = d === "acct_age" ? 'days' :
@@ -65,7 +70,6 @@ function variableAxisTitle(d) {
       return axisLabel
 }
 
-
 // similar to variableTitles, but for group titles
 function groupTitle(k) {
   keyTitle = k === '0' ? 'Non Validator' :
@@ -73,12 +77,14 @@ function groupTitle(k) {
    k === '2' ? 'Master Validator' : ''
   return keyTitle
 }
+
 // function to clear all checked boxes
 function clearAllCheckboxes(){
   var allCheckboxes = $.find("input:checkbox");
   $.each(allCheckboxes, function(i, box){ $(box).prop('checked',false); });
   filter();
 }
+
 // function to fetch
 function fetchData() {
   // load in validator data
@@ -89,11 +95,12 @@ function fetchData() {
     fillClassFieldTabs()
   })
 }
+
 // function that builds out class and field tabs
 function fillClassFieldTabs() {
   // fill the validator group tab with validator groups checkboxes
   keys = d3.values(validatorData).map(
-    function(d){return d.kmeansClass}).filter(
+    function(d){return d.kmeansClassc1c2}).filter(
     function(d){if(typeof(d)==="string") {return d}
   })
   // TODO: MAKE THIS WORK IN SAFARI
@@ -114,7 +121,7 @@ function fillClassFieldTabs() {
     function(a){if(!(a.match(/user/))){return a}}).filter(
     function(a){if(!(a.match(/class/))){return a}})
   // final column is classes, we already gave that its own drop down so not here
-  variables = variables.slice(9,variables.length-1)
+  variables = variables.slice(4,10).filter(function(a){if(!(a.match(/freq/))){return a}})
   // change variable names in dropdown
   variablesText = variables.map(function(d) {return variableTitles(d)})
   for(i=0;i<(variables.length);i++) {
@@ -127,10 +134,12 @@ function fillClassFieldTabs() {
   filter()
   validatorScatter()
 }
+
 // get height, width, and margins based on div
 var scattHWplus = {top: 100, right: 100, bottom: 100, left: 40,
-  height: $('#validatorScatter').innerWidth() - 100,
+  height: $('#validatorScatter').innerWidth(),
   width: $('#validatorScatter').innerWidth() };
+
 // function that builds validator groups scatter plot
 function validatorScatter() {
   // create tooltip div, used later for interactivity
@@ -199,7 +208,7 @@ function validatorScatter() {
     for(i=0;i<pcaX.length;i++) {
       scattDP = [
         pcaX[i],pcaY[i],
-        validatorData["$"+validatorData.keys()[i]].kmeansClass,
+        validatorData["$"+validatorData.keys()[i]].kmeansClassc1c2,
         validatorData["$"+validatorData.keys()[i]].user_name,
       ]
       scattDPs.push(scattDP)
@@ -265,6 +274,7 @@ function validatorScatter() {
         })
 
 }
+
 // function to draw variable graph after filters selected
 function variableGraphDraw() {
   // remove current graph before adding the new one
@@ -281,16 +291,22 @@ function variableGraphDraw() {
   if(variableFilter.length===1){
     // if trying to filter by group, subset list to only include
     // get list of bar chart values and user_name to draw
+
     barVar = validatorData.values().map(function(d)
-      {return _.pick(d,['user_name', 'kmeansClass', variableFilter[0]])}).sort(function(a,b)
+      {return _.pick(d,['user_name', 'kmeansClassc1c2', variableFilter[0]])}).sort(function(a,b)
       {return parseInt(b[variableFilter[0]])-parseInt(a[variableFilter[0]]);})
-    barVar = _.groupBy(barVar,'kmeansClass')
-    barVar = barVar[2].concat(barVar[1]).concat(barVar[0])
+
+    barVar = _.groupBy(barVar,'kmeansClassc1c2')
+
     if(groupFilter.length>0) {
-      barVar = barVar.filter(function(d) {
-        return groupFilter.map(Number).includes(parseInt(d.kmeansClass))
-      })
+      barVar = d3.values(_.pick(barVar,groupFilter))[0]
+      if(groupFilter.length>1) {
+        barVar = barVar[groupFilter[0]].concat(barVar[groupFilter[1]])
+      } else {}
+    } else {
+      barVar = barVar[2].concat(barVar[1]).concat(barVar[0])
     }
+    
       // make scales/axes
       barVarXScale = d3.scaleLinear()
         .domain([0,d3.max(barVar,function(d)
@@ -336,9 +352,9 @@ function variableGraphDraw() {
         .attr("width", function(d) {return barVarXScale(
           parseInt(d[variableFilter[0]])
         )})
-        .attr('fill',function(d) {return d3.schemeCategory10[d.kmeansClass]})
+        .attr('fill',function(d) {return d3.schemeCategory10[d.kmeansClassc1c2]})
         .on('mouseover',function(d){
-          barClass = d.kmeansClass
+          barClass = d.kmeansClassc1c2
           barVariable = d[variableFilter[0]]
           // add validator text to svg
           id = d.user_name.replace(/\s/g, '').replace(/\W/g, '').replace(/\d/g,'')
@@ -478,10 +494,9 @@ function variableGraphDraw() {
   }
 }
 
-
+//function for running scripts on page load
 $(document).ready(function () {
   $(document).foundation();
   fetchData()
   Foundation.reInit('tabs');
-}
-)
+})
