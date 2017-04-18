@@ -50,23 +50,25 @@ function variableTitles(d) {
       d === "road_km_add" ? 'Road Added (km)' :
       d === "road_km_mod" ? 'Road Modified (km) ' :
       d === "waterway_km_add" ? 'Waterway Added (km)' :
-      d === "mapping_freq" ? 'Mapping Frequency' : '';
+      d === "mapping_freq" ? 'Mapping Frequency' :
+      d === "validations_age" ? 'Validations ÷ Account Age' : '';
       return graphTitle
 }
 
 // functoin to properly label x axis for horizontal bar
 function variableAxisTitle(d) {
       axisLabel = d === "acct_age" ? 'days' :
-      d === "validations" ? 'sqaures' :
+      d === "validations" ? 'squares' :
       d === "build_count_add" ? 'buildings' :
       d === "build_count_mod" ? 'buildings':
       d === "changesets" ? 'changesets' :
       d === "josm_edits" ? 'edits' :
       d === "poi_count_add" ? 'points of interest' :
       d === "road_km_add" ? 'road (km)' :
-      d === "road_km_mod" ? 'km (km)' :
+      d === "road_km_mod" ? 'road (km)' :
       d === "waterway_km_add" ? 'waterway (km)' :
-      d === "mapping_freq" ? 'frequency (days)' : '';
+      d === "mapping_freq" ? 'frequency (days)' :
+      d === "validations_age" ? 'validations/account age' : '';
       return axisLabel
 }
 
@@ -121,7 +123,7 @@ function fillClassFieldTabs() {
     function(a){if(!(a.match(/user/))){return a}}).filter(
     function(a){if(!(a.match(/class/))){return a}})
   // final column is classes, we already gave that its own drop down so not here
-  variables = variables.slice(4,10).filter(function(a){if(!(a.match(/freq/))){return a}})
+  variables = variables.slice(5,11)
   // change variable names in dropdown
   variablesText = variables.map(function(d) {return variableTitles(d)})
   for(i=0;i<(variables.length);i++) {
@@ -138,7 +140,7 @@ function fillClassFieldTabs() {
 // get height, width, and margins based on div
 var scattHWplus = {top: 100, right: 100, bottom: 100, left: 40,
   height: $('#validatorScatter').innerWidth(),
-  width: $('#validatorScatter').innerWidth() };
+  width: $('#validatorScatter').innerWidth()};
 
 // function that builds validator groups scatter plot
 function validatorScatter() {
@@ -283,7 +285,7 @@ function variableGraphDraw() {
   // when more than one to be drawn; normalize, then stack ba
   // build the graph
   var varBarGraph = d3.select("#variableBar").append("svg")
-    .attr("width",scattHWplus.width + scattHWplus.left + scattHWplus.right)
+    .attr("width", scattHWplus.width + scattHWplus.left + scattHWplus.right)
     .attr("height", scattHWplus.height + scattHWplus.bottom + scattHWplus.bottom)
     .append('g').attr("transform","translate(" +
       scattHWplus.left + "," + scattHWplus.top + ")")
@@ -492,16 +494,20 @@ function variableGraphDraw() {
       .data(function(d) {return d;})
       .enter().append('rect')
   }
-  EigVecVal()
-  $("#tableDIV").append('<h5>Explained Variance and Variable influence per component</h5>')
+  if(counter===1){
+    EigVecVal()
+    $("#loading").remove();
+  }
 }
 
 // small function to draw table for eigen vectors and values
 function EigVecVal() {
   d3.text("data/EigVar.csv", function(data) {
                var parsedCSV = d3.csvParseRows(data);
-               var container = d3.select("#varianceExplained")
+               var table = d3.select("#varianceExplained")
                    .append("table")
+                   .attr('id','expVarTab')
+               table.append('tbody')
                    .selectAll("tr")
                        .data(parsedCSV).enter()
                        .append("tr")
@@ -509,7 +515,9 @@ function EigVecVal() {
                        .data(function(d) { return d; }).enter()
                        .append("td")
                        .text(function(d) { return d; });
+                $('#expVarTab').prepend('<th colspan=6>Eigenvectors and Eigenvalues</th>')
            });
+
 }
 
 //function for running scripts on page load

@@ -25,6 +25,10 @@
 .checkbox {
   display:inline-block;
 }
+#loading * {
+  display: inline-block;
+}
+
 /*validatorScatter*/
 #validatorScatter {
   text-align: left;
