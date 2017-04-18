@@ -306,7 +306,7 @@ function variableGraphDraw() {
     } else {
       barVar = barVar[2].concat(barVar[1]).concat(barVar[0])
     }
-    
+
       // make scales/axes
       barVarXScale = d3.scaleLinear()
         .domain([0,d3.max(barVar,function(d)
@@ -492,6 +492,24 @@ function variableGraphDraw() {
       .data(function(d) {return d;})
       .enter().append('rect')
   }
+  EigVecVal()
+  $("#tableDIV").append('<h5>Explained Variance and Variable influence per component</h5>')
+}
+
+// small function to draw table for eigen vectors and values
+function EigVecVal() {
+  d3.text("data/EigVar.csv", function(data) {
+               var parsedCSV = d3.csvParseRows(data);
+               var container = d3.select("#varianceExplained")
+                   .append("table")
+                   .selectAll("tr")
+                       .data(parsedCSV).enter()
+                       .append("tr")
+                   .selectAll("td")
+                       .data(function(d) { return d; }).enter()
+                       .append("td")
+                       .text(function(d) { return d; });
+           });
 }
 
 //function for running scripts on page load
